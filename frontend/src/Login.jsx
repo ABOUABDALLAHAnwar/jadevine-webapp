@@ -14,7 +14,7 @@ export default function AuthPage({ onLogin }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await fetch('http://localhost:8001/me', {
+        const res = await fetch('https://jadevinebackend-production.up.railway.app/me', {
           credentials: 'include',
         });
         if (res.ok) {
@@ -45,7 +45,7 @@ export default function AuthPage({ onLogin }) {
     formData.append('password', loginPassword);
 
     try {
-      const res = await fetch('http://localhost:8001/login', {
+      const res = await fetch('https://jadevinebackend-production.up.railway.app/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: formData,
@@ -81,7 +81,7 @@ export default function AuthPage({ onLogin }) {
     formData.append('password', signupPassword);
 
     try {
-      const res = await fetch('http://localhost:8001/signup', {
+      const res = await fetch('https://jadevinebackend-production.up.railway.app/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: formData,

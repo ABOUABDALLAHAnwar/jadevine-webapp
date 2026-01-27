@@ -5,7 +5,7 @@ export function useActions() {
 
   const fetchActions = async () => {
     try {
-      const res = await fetch('http://localhost:8001/all_actions_templates', { credentials: 'include' });
+      const res = await fetch('https://jadevinebackend-production.up.railway.app/all_actions_templates', { credentials: 'include' });
       if (!res.ok) { setActions([]); return; }
       const data = await res.json();
       setActions(Array.isArray(data) ? data : []);

@@ -2,7 +2,7 @@
 import React from "react";
 
 // Tes badges (inchangés)
-const path = "http://localhost:8001/static/image/";
+const path = "https://jadevinebackend-production.up.railway.app/static/image/";
 const badges = [
   { name: "Graine d'Éveil", image: path + "00.png" },
   { name: "Pousse Durable", image: path + "10.png" },

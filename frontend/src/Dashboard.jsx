@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import confetti from "canvas-confetti"; // À installer via npm install canvas-confetti
 import Header from "./components/Header";
 import DashboardGrid from "./components/DashboardGrid";
 import { useActions } from "./hooks/useActions";
@@ -21,35 +22,42 @@ export default function Dashboard() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [cityMarkers, setCityMarkers] = useState([]);
 
-  // --- 1. FETCH ACTIONS ---
+  // --- FONCTION DE RAFRAÎCHISSEMENT SANS RELOAD ---
+  const refreshUserData = async () => {
+    try {
+      const res = await fetch("https://jadevinebackend-production.up.railway.app/get_dashboard_snapshot", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch snapshot");
+      const data = await res.json();
+      setProfile(data.profile);
+      setCoordinates(data.coordinates);
+      setTco2e(data.tco2e);
+      setContributions(data.contributions);
+      setBadges(data.badges);
+    } catch (err) {
+      console.error("Erreur Snapshot User:", err);
+    }
+  };
+
+  const celebrate = () => {
+    confetti({
+      particleCount: 150,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#808000', '#2ecc71', '#f1c40f']
+    });
+  };
+
+  // --- 1. FETCH INITIAL ---
   useEffect(() => {
     fetchActions();
-  }, []);
-
-  // --- 2 À 6. FETCH USER DATA ---
-  useEffect(() => {
-    const fetchUserSnapshot = async () => {
-      try {
-        const res = await fetch("http://localhost:8001/get_dashboard_snapshot", { credentials: "include" });
-        if (!res.ok) throw new Error("Failed to fetch snapshot");
-        const data = await res.json();
-        setProfile(data.profile);
-        setCoordinates(data.coordinates);
-        setTco2e(data.tco2e);
-        setContributions(data.contributions);
-        setBadges(data.badges);
-      } catch (err) {
-        console.error("Erreur Snapshot User:", err);
-      }
-    };
-    fetchUserSnapshot();
+    refreshUserData();
   }, []);
 
   // --- 7. FETCH CITY DATA ---
   useEffect(() => {
     const fetchCityData = async () => {
       try {
-        const res = await fetch("http://localhost:8001/get_cached_city_markers", { credentials: "include" });
+        const res = await fetch("https://jadevinebackend-production.up.railway.app/get_cached_city_markers", { credentials: "include" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         setCityMarkers(data.filter(m => m.coords[0] !== 0 && m.coords[1] !== 0));
@@ -60,10 +68,10 @@ export default function Dashboard() {
     fetchCityData();
   }, []);
 
-  // --- FONCTION OPEN ACTION POPUP ---
+  // --- FONCTION OPEN ACTION POPUP (VERSION COMPLÈTE) ---
   const openActionPopup = async () => {
     try {
-      const res = await fetch("http://localhost:8001/all_actions_names", { credentials: "include" });
+      const res = await fetch("https://jadevinebackend-production.up.railway.app/all_actions_names", { credentials: "include" });
       const actionsList = await res.json();
       const foodOptions = ["beef", "lamb", "pork", "veal", "chicken", "fish", "cheese", "vegetarian", "vegan"];
 
@@ -81,15 +89,20 @@ export default function Dashboard() {
               { name: "address_b", placeholder: "Adresse d'arrivée (B)", type: "text" },
               { name: "type", placeholder: "Type de voiture remplacée", type: "select", options: ["petite", "moyenne", "grande"] }
             ], async (v2, p2) => {
-              const res2 = await fetch("http://localhost:8001/add_user_actions", {
+              const res2 = await fetch("https://jadevinebackend-production.up.railway.app/add_user_actions", {
                 method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name: selected, info: v2 })
               });
-              if (res2.ok) { p2.close(); fetchActions(); window.location.reload(); }
+              if (res2.ok) {
+                p2.close();
+                celebrate();
+                fetchActions();
+                refreshUserData();
+              }
             });
           }
 
-          // 2. RÉGIME ALIMENTAIRE (CORRIGÉ : CHAQUE LIGNE DIT CE QU'ELLE FAIT)
+          // 2. RÉGIME ALIMENTAIRE
           else if (selected === "plant_based_diet") {
             openFormPopup("Combien de repas ?", [{ name: "nb", placeholder: "Nombre de repas (1-5)", type: "number" }], (v2, p2) => {
               const nb = Math.min(Math.max(parseInt(v2.nb) || 1, 1), 5);
@@ -102,16 +115,16 @@ export default function Dashboard() {
               openFormPopup("Détails des repas", mealFields, async (v3, p3) => {
                 const replaced = []; const consumed = [];
                 for(let i=0; i<nb; i++) { replaced.push(v3[`r_${i}`]); consumed.push(v3[`c_${i}`]); }
-                const res2 = await fetch("http://localhost:8001/add_user_actions", {
+                const res2 = await fetch("https://jadevinebackend-production.up.railway.app/add_user_actions", {
                   method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ name: selected, info: { meals_replaced: replaced, meals_consumed: consumed } })
                 });
-                if (res2.ok) { p3.close(); fetchActions(); window.location.reload(); }
+                if (res2.ok) { p3.close(); celebrate(); fetchActions(); refreshUserData(); }
               });
             });
           }
 
-          // 3. DÉCHETS (CORRIGÉ : LES QUESTIONS SONT DANS LE CHAMP)
+          // 3. DÉCHETS
           else if (selected === "waste_reduction") {
             openFormPopup("Bilan Déchets", [
               { name: "bulk_done", placeholder: "Avez-vous acheté en vrac ? (Oui/Non)", type: "select", options: ["Oui", "Non"] },
@@ -129,40 +142,38 @@ export default function Dashboard() {
                 compost_buckets: parseInt(v2.compost_buckets) || 0,
                 glass_trips: parseInt(v2.glass_trips) || 0
               };
-              const res2 = await fetch("http://localhost:8001/add_user_actions", {
+              const res2 = await fetch("https://jadevinebackend-production.up.railway.app/add_user_actions", {
                 method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name: selected, info: info })
               });
-              if (res2.ok) { p2.close(); fetchActions(); window.location.reload(); }
+              if (res2.ok) { p2.close(); celebrate(); fetchActions(); refreshUserData(); }
             });
           }
 
           // 4. ARBRES
           else if (selected === "tree_planting") {
             openFormPopup("Planter des arbres", [{ name: "nb", placeholder: "Combien d'arbres ?", type: "number" }], async (v2, p2) => {
-              const res2 = await fetch("http://localhost:8001/add_user_actions", {
+              const res2 = await fetch("https://jadevinebackend-production.up.railway.app/add_user_actions", {
                 method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name: selected, info: parseInt(v2.nb) || 0 })
               });
-              if (res2.ok) { p2.close(); fetchActions(); window.location.reload(); }
+              if (res2.ok) { p2.close(); celebrate(); fetchActions(); refreshUserData(); }
             });
           }
 
           // 5. ENERGIE
           else if (selected === "renewable_energy") {
             openFormPopup("Énergie Renouvelable", [{ name: "type", placeholder: "Type de logement", type: "select", options: ["apartment", "house"] }], async (v2, p2) => {
-              const res2 = await fetch("http://localhost:8001/add_user_actions", {
+              const res2 = await fetch("https://jadevinebackend-production.up.railway.app/add_user_actions", {
                 method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name: selected, info: v2.type })
               });
-              if (res2.ok) { p2.close(); fetchActions(); window.location.reload(); }
+              if (res2.ok) { p2.close(); celebrate(); fetchActions(); refreshUserData(); }
             });
           }
         }
       );
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const openProfilePopup = () => openFormPopup(
@@ -178,17 +189,17 @@ export default function Dashboard() {
     ],
     async (values, popup) => {
       try {
-        const res = await fetch("http://localhost:8001/initialise_user_profiles", {
+        const res = await fetch("https://jadevinebackend-production.up.railway.app/initialise_user_profiles", {
           method: "POST", credentials: 'include', headers: { "Content-Type": "application/json" },
           body: JSON.stringify(values)
         });
-        if (res.ok) { popup.close(); window.location.reload(); }
+        if (res.ok) { popup.close(); refreshUserData(); }
       } catch { alert("Erreur"); }
     },
     profile
   );
 
-  const handleLogout = () => fetch("http://localhost:8001/logout", { method: "GET", credentials: "include" })
+  const handleLogout = () => fetch("https://jadevinebackend-production.up.railway.app/logout", { method: "GET", credentials: "include" })
     .then(() => window.location.reload()).catch(console.error);
 
   // --- INITIALISATION CARTE ---
