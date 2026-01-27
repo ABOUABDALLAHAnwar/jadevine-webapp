@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import confetti from "canvas-confetti"; // À installer via npm install canvas-confetti
+import confetti from "canvas-confetti";
 import Header from "./components/Header";
 import DashboardGrid from "./components/DashboardGrid";
 import { useActions } from "./hooks/useActions";
@@ -22,7 +22,6 @@ export default function Dashboard() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [cityMarkers, setCityMarkers] = useState([]);
 
-  // --- FONCTION DE RAFRAÎCHISSEMENT SANS RELOAD ---
   const refreshUserData = async () => {
     try {
       const res = await fetch("https://jadevinebackend-production.up.railway.app/get_dashboard_snapshot", { credentials: "include" });
@@ -33,27 +32,15 @@ export default function Dashboard() {
       setTco2e(data.tco2e);
       setContributions(data.contributions);
       setBadges(data.badges);
-    } catch (err) {
-      console.error("Erreur Snapshot User:", err);
-    }
+    } catch (err) { console.error("Erreur Snapshot User:", err); }
   };
 
   const celebrate = () => {
-    confetti({
-      particleCount: 150,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#808000', '#2ecc71', '#f1c40f']
-    });
+    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#808000', '#2ecc71', '#f1c40f'] });
   };
 
-  // --- 1. FETCH INITIAL ---
-  useEffect(() => {
-    fetchActions();
-    refreshUserData();
-  }, []);
+  useEffect(() => { fetchActions(); refreshUserData(); }, []);
 
-  // --- 7. FETCH CITY DATA ---
   useEffect(() => {
     const fetchCityData = async () => {
       try {
@@ -61,14 +48,11 @@ export default function Dashboard() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         setCityMarkers(data.filter(m => m.coords[0] !== 0 && m.coords[1] !== 0));
-      } catch (err) {
-        console.error("Error in fetchCityData:", err);
-      }
+      } catch (err) { console.error("Error in fetchCityData:", err); }
     };
     fetchCityData();
   }, []);
 
-  // --- FONCTION OPEN ACTION POPUP (VERSION COMPLÈTE) ---
   const openActionPopup = async () => {
     try {
       const res = await fetch("https://jadevinebackend-production.up.railway.app/all_actions_names", { credentials: "include" });
@@ -82,27 +66,19 @@ export default function Dashboard() {
           const selected = values.action;
           popup.close();
 
-          // 1. TRANSPORT
           if (selected === "reduce_car_use_bicycle" || selected === "reduce_car_use_public_transport") {
             openFormPopup("Détails Trajet", [
-              { name: "address_a", placeholder: "Adresse de départ (A)", type: "text" },
-              { name: "address_b", placeholder: "Adresse d'arrivée (B)", type: "text" },
+              { name: "address_a", placeholder: "Adresse de départ (A)", type: "address" },
+              { name: "address_b", placeholder: "Adresse d'arrivée (B)", type: "address" },
               { name: "type", placeholder: "Type de voiture remplacée", type: "select", options: ["petite", "moyenne", "grande"] }
             ], async (v2, p2) => {
               const res2 = await fetch("https://jadevinebackend-production.up.railway.app/add_user_actions", {
                 method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name: selected, info: v2 })
               });
-              if (res2.ok) {
-                p2.close();
-                celebrate();
-                fetchActions();
-                refreshUserData();
-              }
+              if (res2.ok) { p2.close(); celebrate(); fetchActions(); refreshUserData(); }
             });
           }
-
-          // 2. RÉGIME ALIMENTAIRE
           else if (selected === "plant_based_diet") {
             openFormPopup("Combien de repas ?", [{ name: "nb", placeholder: "Nombre de repas (1-5)", type: "number" }], (v2, p2) => {
               const nb = Math.min(Math.max(parseInt(v2.nb) || 1, 1), 5);
@@ -123,8 +99,6 @@ export default function Dashboard() {
               });
             });
           }
-
-          // 3. DÉCHETS
           else if (selected === "waste_reduction") {
             openFormPopup("Bilan Déchets", [
               { name: "bulk_done", placeholder: "Avez-vous acheté en vrac ? (Oui/Non)", type: "select", options: ["Oui", "Non"] },
@@ -149,8 +123,6 @@ export default function Dashboard() {
               if (res2.ok) { p2.close(); celebrate(); fetchActions(); refreshUserData(); }
             });
           }
-
-          // 4. ARBRES
           else if (selected === "tree_planting") {
             openFormPopup("Planter des arbres", [{ name: "nb", placeholder: "Combien d'arbres ?", type: "number" }], async (v2, p2) => {
               const res2 = await fetch("https://jadevinebackend-production.up.railway.app/add_user_actions", {
@@ -160,8 +132,6 @@ export default function Dashboard() {
               if (res2.ok) { p2.close(); celebrate(); fetchActions(); refreshUserData(); }
             });
           }
-
-          // 5. ENERGIE
           else if (selected === "renewable_energy") {
             openFormPopup("Énergie Renouvelable", [{ name: "type", placeholder: "Type de logement", type: "select", options: ["apartment", "house"] }], async (v2, p2) => {
               const res2 = await fetch("https://jadevinebackend-production.up.railway.app/add_user_actions", {
@@ -184,7 +154,7 @@ export default function Dashboard() {
       { name: "about", placeholder: "À propos" },
       { name: "age", placeholder: "Âge", type: "number" },
       { name: "country", placeholder: "Pays" },
-      { name: "address", placeholder: "Adresse" },
+      { name: "address", placeholder: "Adresse", type: "address" },
       { name: "phone", placeholder: "Téléphone" }
     ],
     async (values, popup) => {
@@ -202,7 +172,6 @@ export default function Dashboard() {
   const handleLogout = () => fetch("https://jadevinebackend-production.up.railway.app/logout", { method: "GET", credentials: "include" })
     .then(() => window.location.reload()).catch(console.error);
 
-  // --- INITIALISATION CARTE ---
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
     mapInstanceRef.current = L.map(mapContainerRef.current, { center: [44.837789, -0.57918], zoom: 12, scrollWheelZoom: false });
@@ -213,7 +182,6 @@ export default function Dashboard() {
     return () => { if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; } };
   }, []);
 
-  // --- MISE À JOUR FORMES ---
   useEffect(() => {
     if (!mapInstanceRef.current) return;
     const lg = layerGroupRef.current;
@@ -261,13 +229,13 @@ export default function Dashboard() {
                         <td style={{ verticalAlign: "top" }}>
                           <div className="font-semibold mb-2 text-xs uppercase text-gray-400">Badge actuel</div>
                           {badges.current_badge?.image && (
-                            <img src={`http://localhost:8001${badges.current_badge.image}`} alt="current" style={{ width: "2.5cm", height: "2.5cm", objectFit: "contain" }} />
+                            <img src={`https://jadevinebackend-production.up.railway.app${badges.current_badge.image}`} alt="current" style={{ width: "2.5cm", height: "2.5cm", objectFit: "contain" }} />
                           )}
                         </td>
                         <td style={{ verticalAlign: "top" }}>
                           <div className="font-semibold mb-2 text-xs uppercase text-gray-400">Prochain badge</div>
                           {badges.next_badge?.image && (
-                            <img src={`http://localhost:8001${badges.next_badge.image}`} alt="next" style={{ width: "2.5cm", height: "2.5cm", objectFit: "contain", opacity: 0.4 }} />
+                            <img src={`https://jadevinebackend-production.up.railway.app${badges.next_badge.image}`} alt="next" style={{ width: "2.5cm", height: "2.5cm", objectFit: "contain", opacity: 0.4 }} />
                           )}
                         </td>
                       </tr>
