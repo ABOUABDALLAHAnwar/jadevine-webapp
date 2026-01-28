@@ -9,6 +9,16 @@ import { openFormPopup } from "./utils/openFormPopup";
 import ContributionDonut from "./components/ContributionDonut";
 import OnboardingPage from "./pages/OnboardingPage";
 
+// Mapping pour l'affichage en français
+const ACTION_DISPLAY_NAMES = {
+  "renewable_energy": "Énergie Renouvelable",
+  "reduce_car_use_bicycle": "Utilisation du Vélo",
+  "tree_planting": "Plantation d'Arbres",
+  "waste_reduction": "Réduction des Déchets",
+  "reduce_car_use_public_transport": "Transports en Commun",
+  "plant_based_diet": "Alimentation Végétale"
+};
+
 export default function Dashboard() {
   const { actions, fetchActions } = useActions();
   const mapContainerRef = useRef(null);
@@ -57,13 +67,18 @@ export default function Dashboard() {
     try {
       const res = await fetch("https://jadevinebackend-production.up.railway.app/all_actions_names", { credentials: "include" });
       const actionsList = await res.json();
+
+      // On crée des strings simples pour éviter le bug [object Object]
+      const displayOptions = actionsList.map(key => `${ACTION_DISPLAY_NAMES[key] || key} | ${key}`);
       const foodOptions = ["beef", "lamb", "pork", "veal", "chicken", "fish", "cheese", "vegetarian", "vegan"];
 
       openFormPopup(
         "Choisir Action",
-        [{ name: "action", placeholder: "Sélectionnez l'action", type: "select", options: actionsList }],
+        [{ name: "action", placeholder: "Sélectionnez l'action", type: "select", options: displayOptions }],
         (values, popup) => {
-          const selected = values.action;
+          // Extraction de la clé technique (après le '|')
+          const selectedRaw = values.action;
+          const selected = selectedRaw.includes(" | ") ? selectedRaw.split(" | ")[1].trim() : selectedRaw;
           popup.close();
 
           if (selected === "reduce_car_use_bicycle" || selected === "reduce_car_use_public_transport") {
