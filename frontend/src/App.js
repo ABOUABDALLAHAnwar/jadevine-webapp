@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Dashboard from "./Dashboard";
+import Dashboard from "./Dashboard3";
 import Login from "./Login";
 import OnboardingPage from "./pages/OnboardingPage"; // Ton composant onboarding
 

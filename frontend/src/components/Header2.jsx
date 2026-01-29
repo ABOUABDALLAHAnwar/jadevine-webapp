@@ -1,50 +1,38 @@
 import React from 'react';
 import JadevineLogo from '../JadevineAI.png';
 
-function Header({ onAddAction, onUpdateProfile, onLogout, onOnboarding }) {
+function Header({ onAddAction, onUpdateProfile, onLogout, onOnboarding, onOpenDocuments }) {
+  // Style "Onglet" : arrondi uniquement en haut (rounded-t-lg), plat en bas
   const btnStyle = "px-5 py-2 rounded-t-lg transition-all duration-200 active:scale-95 shadow-md hover:shadow-lg font-medium flex items-center justify-center gap-2 border-x border-t";
-
-  const handleDownload = async () => {
-    try {
-      const response = await fetch('https://jadevinebackend-production.up.railway.app/generate_new_repport', {
-        method: 'GET',
-        headers: {
-          'accept': 'application/json',
-        },
-        // INDISPENSABLE pour envoyer l'access_token (cookie) au backend
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        const s3Url = await response.json();
-        window.open(s3Url, '_blank');
-      } else if (response.status === 401) {
-        alert("Session expirée ou non autorisée. Veuillez vous reconnecter.");
-      } else {
-        console.error("Erreur serveur:", response.status);
-      }
-    } catch (error) {
-      console.error("Erreur lors de l'appel API:", error);
-    }
-  };
 
   return (
     <header className="flex justify-between items-end px-6 pt-4 h-28 bg-gray-900/80 backdrop-blur-sm text-white rounded-b-xl shadow-lg border-b border-white/20">
+
+      {/* Gauche : Logo + Titre (légèrement décollés du bord avec pb-1) */}
       <div className="flex items-end gap-4 pb-2">
         <div className="w-12 h-12 flex items-center justify-center flex-shrink-0">
           <img
             src={JadevineLogo}
             alt="Jadevine Logo"
             className="max-h-full max-w-full object-contain"
-            style={{ maxHeight: '48px', maxWidth: '150px', height: 'auto', width: 'auto' }}
+            style={{
+              maxHeight: '48px',
+              maxWidth: '150px',
+              height: 'auto',
+              width: 'auto',
+            }}
           />
         </div>
+
         <h1 className="text-2xl font-bold whitespace-nowrap bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
           Bienvenue sur Jade Vine AI <span className="text-xs font-light opacity-50 uppercase tracking-tighter">Beta</span>
         </h1>
       </div>
 
+      {/* Droite : Boutons collés au bas de la bordure */}
       <div className="flex gap-1 items-end">
+        {/* Nouveau bouton Documents */}
+
         <button
           onClick={onAddAction}
           className={`${btnStyle} bg-gradient-to-br from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 border-blue-400/30`}
@@ -58,12 +46,11 @@ function Header({ onAddAction, onUpdateProfile, onLogout, onOnboarding }) {
         >
           <span>👤</span> Mes infos
         </button>
-
         <button
-          onClick={handleDownload}
+          onClick={onOpenDocuments}
           className={`${btnStyle} bg-gradient-to-br from-amber-500 to-amber-700 hover:from-amber-400 hover:to-amber-600 border-amber-400/30`}
         >
-          <span>📂</span> Rapport d'impact
+          <span>📂</span> Documents
         </button>
 
         <button
