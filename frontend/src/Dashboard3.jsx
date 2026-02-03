@@ -34,12 +34,12 @@ export default function Dashboard() {
   const [badges, setBadges] = useState({ current_badge: null, next_badge: null, progress_percent: 0 });
   const [cityMarkers, setCityMarkers] = useState([]);
 
-  // États UI
+  // ÉTATS UI
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isDataReady, setIsDataReady] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // --- CHARGEMENT DES DONNÉES ---
+  // --- FONCTIONS DE FETCH ---
 
   const refreshUserData = async () => {
     try {
@@ -63,49 +63,59 @@ export default function Dashboard() {
     } catch (err) { console.error("Error in fetchCityData:", err); }
   };
 
+  // --- LOGIQUE DE CHARGEMENT ---
   useEffect(() => {
     let isMounted = true;
+
     const loaderTimer = setTimeout(() => {
-      if (isMounted && !isDataReady) setIsSyncing(true);
+      if (isMounted && !isDataReady) {
+        setIsSyncing(true);
+      }
     }, 2000);
 
     const initApp = async () => {
       try {
-        await Promise.all([fetchActions(), refreshUserData(), fetchCityData()]);
+        await Promise.all([
+          fetchActions(),
+          refreshUserData(),
+          fetchCityData()
+        ]);
         if (isMounted) {
           setIsDataReady(true);
           setIsSyncing(false);
           clearTimeout(loaderTimer);
         }
       } catch (e) {
+        console.error("Init error", e);
         if (isMounted) setIsDataReady(true);
       }
     };
+
     initApp();
     return () => { isMounted = false; clearTimeout(loaderTimer); };
   }, []);
 
   // --- LOGIQUE DE LA CARTE ---
-
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-    mapInstanceRef.current = L.map(mapContainerRef.current, {
-      center: [44.837789, -0.57918],
-      zoom: 12,
-      scrollWheelZoom: false
-    });
+    const initMap = () => {
+      mapInstanceRef.current = L.map(mapContainerRef.current, {
+        center: [44.837789, -0.57918],
+        zoom: 12,
+        scrollWheelZoom: false
+      });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(mapInstanceRef.current);
+      layerGroupRef.current.addTo(mapInstanceRef.current);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap'
-    }).addTo(mapInstanceRef.current);
+      setTimeout(() => {
+        mapInstanceRef.current?.invalidateSize();
+      }, 500);
+    };
 
-    layerGroupRef.current.addTo(mapInstanceRef.current);
-
-    // Force le rendu correct de la carte dès que l'opacité change
-    setTimeout(() => {
-      if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize();
-    }, 500);
+    initMap();
 
     return () => {
       if (mapInstanceRef.current) {
@@ -115,16 +125,19 @@ export default function Dashboard() {
     };
   }, []);
 
+  // MISE À JOUR DES MARKERS
   useEffect(() => {
     if (!mapInstanceRef.current) return;
     const lg = layerGroupRef.current;
     lg.clearLayers();
 
-    cityMarkers.forEach(({ name, count, co2, coords }) => {
-      if (!coords || coords[0] === 0) return;
-      L.circle(coords, { color: "olive", fillColor: "olive", fillOpacity: 0.3, radius: 1000 })
-        .bindPopup(`<b>Ville: ${name}</b><br>Utilisateurs: ${count}<br>CO2: ${co2?.toFixed(4) ?? "?"}`).addTo(lg);
-    });
+    if (Array.isArray(cityMarkers)) {
+      cityMarkers.forEach(({ name, count, co2, coords }) => {
+        if (!coords || coords[0] === 0) return;
+        L.circle(coords, { color: "olive", fillColor: "olive", fillOpacity: 0.3, radius: 1000 })
+          .bindPopup(`<b>Ville: ${name}</b><br>Utilisateurs: ${count}<br>CO2: ${co2?.toFixed(4) ?? "?"}`).addTo(lg);
+      });
+    }
 
     if (coordinates?.length === 2 && coordinates[0] !== 0) {
       const size = 0.002;
@@ -137,7 +150,7 @@ export default function Dashboard() {
     }
   }, [cityMarkers, coordinates, isDataReady]);
 
-  // --- ACTIONS ET POPUPS ---
+  // --- TOUTES TES ACTIONS ET POPUPS (RESTAURÉES) ---
 
   const celebrate = () => {
     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#808000', '#2ecc71', '#f1c40f'] });
@@ -257,28 +270,36 @@ export default function Dashboard() {
   const handleLogout = () => fetch("https://jadevinebackend-production.up.railway.app/logout", { method: "GET", credentials: "include" })
     .then(() => window.location.reload()).catch(console.error);
 
-  // --- RENDU FINAL ---
+  // --- RENDU FINAL (ZÉRO RETOURS CONDITIONNELS) ---
 
   return (
-    <div className="relative min-h-screen">
-      {/* OVERLAY CHARGEMENT */}
+    <div className="relative min-h-screen w-full">
+
+      {/* 1. OVERLAY ANECDOTES / SYNCING */}
       {isSyncing && !isDataReady && (
         <div className="fixed inset-0 z-[9999]">
           <LoadingScreen />
         </div>
       )}
 
-      {/* DASHBOARD */}
+      {/* 2. RIDEAU NOIR INITIAL (Pendant les 2s d'attente si pas prêt) */}
+      {!isDataReady && !isSyncing && (
+        <div className="fixed inset-0 z-[9998] bg-[#050a09]" />
+      )}
+
+      {/* 3. DASHBOARD (TOUJOURS DANS LE DOM) */}
       <div className={`min-h-screen bg-cover bg-center bg-fixed transition-opacity duration-500 ${isDataReady ? 'opacity-100' : 'opacity-0'}`}
            style={{ backgroundImage: "url('https://thumbs.dreamstime.com/b/misty-forest-scene-serene-green-nature-background-ideal-relaxation-documentaries-tones-soft-light-atmosphere-themes-376070078.jpg')" }}>
         <div className="absolute inset-0 bg-black/40"></div>
         <div className="relative z-10 flex flex-col min-h-screen">
           <Header onAddAction={openActionPopup} onUpdateProfile={openProfilePopup} onLogout={handleLogout} onOnboarding={() => setShowOnboarding(true)} />
+
           <main className="flex-1 p-6">
             <DashboardGrid>
               <div className="card bg-white shadow-xl rounded-lg overflow-hidden" style={{ height: '500px', zIndex: 1 }}>
                 <div ref={mapContainerRef} style={{ height: '100%', width: '100%' }}></div>
               </div>
+
               <div className="card bg-white/90 backdrop-blur-sm shadow-xl p-6 flex flex-col justify-between h-full overflow-y-auto">
                 <div>
                   <h2 className="text-4xl font-extrabold mb-6" style={{ color: 'olive' }}>Profil Utilisateur</h2>
@@ -291,6 +312,7 @@ export default function Dashboard() {
                     <p><strong>Adresse:</strong> {profile.address}</p>
                     <p><strong>Téléphone:</strong> {profile.phone}</p>
                   </div>
+
                   <div className="my-8">
                     <table style={{ margin: "0 auto", borderCollapse: "separate", borderSpacing: "60px 0" }}>
                       <tbody>
@@ -309,6 +331,7 @@ export default function Dashboard() {
                     <progress className="w-full h-4 mt-6 block" value={badges.progress_percent || 0} max={100} style={{ accentColor: "olive" }} />
                     <p className="text-center mt-4 font-bold">{(badges.progress_percent || 0).toFixed(1)} % vers le prochain badge</p>
                   </div>
+
                   <h2 className="text-4xl font-extrabold mb-6" style={{ color: 'olive' }}>Bilan d'activité</h2>
                   <p className="font-bold text-green-600 mb-2">CO₂ évité: {(tco2e.tco2e_total || 0).toFixed(6)} t</p>
                   <div className="flex justify-center items-center my-8">
