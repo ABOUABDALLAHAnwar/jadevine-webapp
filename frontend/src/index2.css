@@ -1,0 +1,101 @@
+
+/* ==== Global ==== */
+body {
+  font-family: 'Roboto', sans-serif;
+  margin: 0;
+  background: #f0f2f5;
+  color: #333;
+  overflow-x: hidden;
+}
+
+/* HEADER ADAPTATIF */
+header {
+  background: linear-gradient(90deg, #4a6c59, #2f4f3f);
+  color: white;
+  padding: 20px;
+  display: flex;
+  flex-direction: column; /* Par défaut pour mobile */
+  align-items: center;
+  gap: 15px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+@media (min-width: 900px) {
+  header {
+    flex-direction: row; /* Côte à côte sur PC */
+    justify-content: space-between;
+    padding: 20px 40px;
+  }
+}
+
+header h1 { font-size: 1.5rem; text-align: center; }
+
+/* BOUTONS DU HAUT */
+.header-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+header button {
+  background: #6b8b73;
+  border: none;
+  padding: 10px 15px;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+/* DASHBOARD : Le coeur du problème */
+#dashboard {
+  display: flex;
+  flex-direction: column; /* Pile verticale sur mobile */
+  gap: 20px;
+  padding: 20px;
+}
+
+@media (min-width: 900px) {
+  #dashboard {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* 2 colonnes sur PC */
+    padding: 30px 40px;
+  }
+}
+
+/* CARTES BLANCHES */
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* LA CARTE (MAP) */
+#map {
+  height: 400px;
+  width: 100%;
+  border-radius: 12px;
+}
+
+@media (min-width: 900px) {
+  #map { height: 550px; }
+}
+
+/* TEXTES ET DETAILS */
+#total-co2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #4a6c59;
+}
+
+.profile-info p {
+  margin: 8px 0;
+  line-height: 1.4;
+}
+
+/* Hack iOS pour éviter les bugs visuels */
+* { -webkit-tap-highlight-color: transparent; }

@@ -1,5 +1,5 @@
 import React from 'react';
-import JadevineLogo from '../JadevineAI.png';
+import JadevineLogo from '../images/JadevineAI.png';
 
 function Header({ onAddAction, onUpdateProfile, onLogout, onOnboarding }) {
   const btnStyle = "px-5 py-2 rounded-t-lg transition-all duration-200 active:scale-95 shadow-md hover:shadow-lg font-medium flex items-center justify-center gap-2 border-x border-t";

@@ -110,12 +110,6 @@ export default function Dashboard() {
     }, profile
   );
 
-  const handleLogout = () => {
-    fetch(`${BACKEND_URL}/logout`, { method: "GET", credentials: "include" })
-      .then(() => window.location.reload())
-      .catch(console.error);
-  };
-
   return (
     <div className="relative min-h-screen w-full">
       {isSyncing && !isDataReady && <div className="fixed inset-0 z-[9999]"><LoadingScreen /></div>}
@@ -125,7 +119,7 @@ export default function Dashboard() {
            style={{ backgroundImage: "url('https://thumbs.dreamstime.com/b/misty-forest-scene-serene-green-nature-background-ideal-relaxation-documentaries-tones-soft-light-atmosphere-themes-376070078.jpg')" }}>
         <div className="absolute inset-0 bg-black/40"></div>
         <div className="relative z-10 flex flex-col min-h-screen">
-          <Header onAddAction={openActionPopup} onUpdateProfile={openProfilePopup} onLogout={handleLogout} onOnboarding={() => setShowOnboarding(true)} />
+          <Header onAddAction={openActionPopup} onUpdateProfile={openProfilePopup} onLogout={() => window.location.reload()} onOnboarding={() => setShowOnboarding(true)} />
           <main className="flex-1 p-6">
             <DashboardGrid>
               <div className="card bg-white shadow-xl rounded-lg overflow-hidden" style={{ height: '500px', zIndex: 1 }}>
